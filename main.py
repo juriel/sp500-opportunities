@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from scripts import download
+from scripts import download, indicators
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -12,6 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", metavar="<comando>")
 
     download.register(subparsers)
+    indicators.register(subparsers)
 
     return parser
 
