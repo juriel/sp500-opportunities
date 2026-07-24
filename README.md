@@ -53,22 +53,25 @@ python main.py download --output sp500.xlsx    # exportar a Excel
 Calcula más de 55 indicadores técnicos usando TA-Lib. Acepta uno o varios tickers separados por coma.
 
 ```bash
-python main.py indicators NVDA                          # un ticker
-python main.py indicators NVDA,IBM,TSLA --pretty        # varios tickers, tabla formateada
-python main.py indicators NVDA --period 2y              # período histórico personalizado
-python main.py indicators NVDA,IBM --output analisis.xlsx  # una hoja por ticker en Excel
-python main.py indicators NVDA,IBM --output analisis.csv   # CSV con columna ticker
+python main.py indicators NVDA                              # un ticker
+python main.py indicators NVDA,IBM,TSLA --pretty            # varios tickers, tabla formateada
+python main.py indicators NVDA --period 2y                  # período histórico personalizado
+python main.py indicators NVDA --pivots --pretty            # incluye análisis de pivots
+python main.py indicators NVDA,IBM --output analisis.xlsx   # una hoja por ticker en Excel
+python main.py indicators NVDA,IBM --output analisis.csv    # CSV con columna ticker
 ```
 
 | Parámetro | Descripción |
 |-----------|-------------|
 | `tickers` | Ticker(s) separados por coma: `NVDA,IBM,TSLA` |
 | `--period` | Período histórico: `3mo`, `6mo`, `1y` (default), `2y`, `5y` |
+| `--pivots` | Añade análisis de máximos/mínimos locales (ver abajo) |
 
-**Indicadores calculados:**
+**Secciones del reporte:**
 
-| Categoría | Indicadores |
-|-----------|-------------|
+| Categoría | Contenido |
+|-----------|-----------|
+| Precio | Cierre, apertura, high/low del día, variación, racha consecutiva, días al alza/baja en 5D/20D/60D |
 | Tendencia | SMA 20/50/200, EMA 9/12/21/26/50, DEMA, TEMA, KAMA, T3, HT_TRENDLINE, HT_TRENDMODE |
 | Momentum | RSI, MACD, STOCH, STOCHRSI, WILLR, CCI, CMO, AROON, ULTOSC, ROC, TRIX, PPO, BOP, ADX, PLUS/MINUS DI, MFI |
 | Volatilidad | Bollinger Bands (upper/mid/lower/width), ATR, NATR, TRANGE |
@@ -76,6 +79,14 @@ python main.py indicators NVDA,IBM --output analisis.csv   # CSV con columna tic
 | Ciclos | HT_DCPERIOD, HT_DCPHASE, HT_SINE, HT_LEADSINE |
 | Estadística | LINEARREG_SLOPE, STDDEV, BETA, TSF, VAR |
 | Patrones de velas | DOJI, HAMMER, ENGULFING, MORNING/EVENING STAR, 3 WHITE SOLDIERS, 3 BLACK CROWS, HARAMI, SHOOTING STAR |
+
+**Con `--pivots` se añaden tres métodos de detección de soportes y resistencias:**
+
+| Categoría | Método | Cuándo usarlo |
+|-----------|--------|---------------|
+| Período | High/low de 20D, 60D y 52W | Contexto rápido de rango histórico |
+| Fractales · Soporte/Resistencia | Fractales de Williams (5 barras) | Niveles clásicos del AT, sin ruido |
+| Scipy · Soporte/Resistencia | `scipy.signal.find_peaks` (prominencia ≥3%) | Pivots estadísticamente significativos |
 
 ---
 
@@ -108,3 +119,4 @@ cd ta-lib && ./configure --prefix=/usr && make && sudo make install
 - **slickcharts.com** — lista actualizada de componentes y pesos del S&P 500
 - **yfinance** — precios históricos y datos OHLCV
 - **TA-Lib** — cálculo de indicadores técnicos
+- **scipy** — detección de pivots por prominencia estadística
