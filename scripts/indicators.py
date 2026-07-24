@@ -123,6 +123,40 @@ def _calculate(ticker: str, df: pd.DataFrame) -> list[dict]:
     def overbought(v, high=70, low=30):
         return "Sobrecomprado" if v > high else ("Sobrevendido" if v < low else "Neutral")
 
+    # ── Precio ─────────────────────────────────────────────────────────────────
+    daily_changes = np.diff(c)
+    daily_up = daily_changes > 0
+
+    # Cierre y variación del día
+    day_chg = c[-1] - c[-2]
+    day_pct = (day_chg / c[-2]) * 100
+    add("Precio", "Cierre",       c[-1],   f"{day_chg:+.2f} ({day_pct:+.2f}%)")
+    add("Precio", "Apertura",     o[-1])
+    add("Precio", "High del día", h[-1])
+    add("Precio", "Low del día",  l[-1])
+
+    # Racha consecutiva actual
+    streak = 1
+    direction = daily_up[-1]
+    for chg in reversed(daily_up[:-1]):
+        if chg == direction:
+            streak += 1
+        else:
+            break
+    streak_label = f"{'Alza' if direction else 'Baja'}"
+    add("Precio", "Racha actual", streak, f"días en {streak_label}")
+
+    # Días al alza/baja por período
+    for n, label in [(5, "5D"), (20, "20D"), (60, "60D")]:
+        if len(daily_up) < n:
+            continue
+        window = daily_up[-n:]
+        up_days   = int(window.sum())
+        down_days = n - up_days
+        up_pct    = (up_days / n) * 100
+        add("Precio", f"Días alza  {label}", up_days,   f"{up_pct:.0f}% de {n} días")
+        add("Precio", f"Días baja  {label}", down_days, f"{100 - up_pct:.0f}% de {n} días")
+
     # ── Tendencia ──────────────────────────────────────────────────────────────
     for period, label in [(20, "SMA20"), (50, "SMA50"), (200, "SMA200")]:
         val = talib.SMA(c, timeperiod=period)[-1]
