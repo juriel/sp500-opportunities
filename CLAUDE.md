@@ -52,3 +52,14 @@ Si se usa `--output`, se ignora `--pretty`.
 source venv/bin/activate
 python main.py <comando> --help
 ```
+
+## Dependencias del sistema
+
+**TA-Lib** requiere la librería C instalada antes de `pip install TA-Lib`.
+No está en los repos de Fedora — compilar desde fuente:
+
+```bash
+wget https://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+tar -xzf ta-lib-0.4.0-src.tar.gz
+cd ta-lib && ./configure --prefix=/usr && make && sudo make install
+```
