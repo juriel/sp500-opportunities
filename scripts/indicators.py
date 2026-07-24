@@ -127,7 +127,7 @@ def _calculate(ticker: str, df: pd.DataFrame) -> list[dict]:
     add("Tendencia", "DEMA21",      talib.DEMA(c, timeperiod=21)[-1])
     add("Tendencia", "TEMA21",      talib.TEMA(c, timeperiod=21)[-1])
     add("Tendencia", "KAMA",        talib.KAMA(c)[-1])
-    add("Tendencia", "T3",          talib.T3(c)[-1])
+    add("Tendencia", "T3_21",        talib.T3(c, timeperiod=21)[-1])
     add("Tendencia", "HT_TRENDLINE", talib.HT_TRENDLINE(c)[-1])
 
     ht_mode = talib.HT_TRENDMODE(c)[-1]
@@ -186,7 +186,7 @@ def _calculate(ticker: str, df: pd.DataFrame) -> list[dict]:
     add("Momentum", "MFI14", mfi, overbought(mfi, 80, 20))
 
     # ── Volatilidad ────────────────────────────────────────────────────────────
-    upper, mid, lower = talib.BBANDS(c)
+    upper, mid, lower = talib.BBANDS(c, timeperiod=20, nbdevup=2, nbdevdn=2)
     if c[-1] > upper[-1]:
         bb_sig = "Sobrecomprado"
     elif c[-1] < lower[-1]:
