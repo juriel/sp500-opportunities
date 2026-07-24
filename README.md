@@ -56,7 +56,9 @@ Calcula más de 55 indicadores técnicos usando TA-Lib. Acepta uno o varios tick
 python main.py indicators NVDA                              # un ticker
 python main.py indicators NVDA,IBM,TSLA --pretty            # varios tickers, tabla formateada
 python main.py indicators NVDA --period 2y                  # período histórico personalizado
-python main.py indicators NVDA --pivots --pretty            # incluye análisis de pivots
+python main.py indicators NVDA --pivots --pretty            # pivots: los tres métodos
+python main.py indicators NVDA --pivots fractals            # solo fractales de Williams
+python main.py indicators NVDA --pivots period scipy        # período y scipy
 python main.py indicators NVDA,IBM --output analisis.xlsx   # una hoja por ticker en Excel
 python main.py indicators NVDA,IBM --output analisis.csv    # CSV con columna ticker
 ```
@@ -65,7 +67,7 @@ python main.py indicators NVDA,IBM --output analisis.csv    # CSV con columna ti
 |-----------|-------------|
 | `tickers` | Ticker(s) separados por coma: `NVDA,IBM,TSLA` |
 | `--period` | Período histórico: `3mo`, `6mo`, `1y` (default), `2y`, `5y` |
-| `--pivots` | Añade análisis de máximos/mínimos locales (ver abajo) |
+| `--pivots [METODO ...]` | Añade análisis de máximos/mínimos locales (ver abajo). Sin argumentos incluye los tres métodos |
 
 **Secciones del reporte:**
 
@@ -82,11 +84,13 @@ python main.py indicators NVDA,IBM --output analisis.csv    # CSV con columna ti
 
 **Con `--pivots` se añaden tres métodos de detección de soportes y resistencias:**
 
-| Categoría | Método | Cuándo usarlo |
-|-----------|--------|---------------|
-| Período | High/low de 20D, 60D y 52W | Contexto rápido de rango histórico |
-| Fractales · Soporte/Resistencia | Fractales de Williams (5 barras) | Niveles clásicos del AT, sin ruido |
-| Scipy · Soporte/Resistencia | `scipy.signal.find_peaks` (prominencia ≥3%) | Pivots estadísticamente significativos |
+| Método | Categoría en reporte | Descripción | Cuándo usarlo |
+|--------|----------------------|-------------|---------------|
+| `period` | Período | High/low de 20D, 60D y 52W vía `talib.MAX/MIN` | Contexto rápido de rango histórico |
+| `fractals` | Fractales · Soporte/Resistencia | Fractales de Williams (5 barras) | Niveles clásicos del AT, sin ruido |
+| `scipy` | Scipy · Soporte/Resistencia | `scipy.signal.find_peaks` (prominencia ≥3%) | Pivots estadísticamente significativos |
+
+Sin argumentos (`--pivots`) incluye los tres. Se pueden combinar: `--pivots period scipy`.
 
 ---
 
