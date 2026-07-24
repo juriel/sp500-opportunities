@@ -37,8 +37,14 @@ def register(subparsers):
     )
     p.add_argument(
         "--pivots",
-        action="store_true",
-        help="Añade análisis de máximos/mínimos locales (período, fractales de Williams y scipy)",
+        nargs="*",
+        choices=["period", "fractals", "scipy"],
+        metavar="METODO",
+        help=(
+            "Añade análisis de pivots. Sin argumentos incluye los tres métodos. "
+            "Métodos disponibles: period, fractals, scipy "
+            "(ej: --pivots period scipy)"
+        ),
     )
     p.add_argument(
         "--output",
@@ -58,8 +64,9 @@ def run(args):
         if df is None:
             continue
         rows = _calculate(ticker, df)
-        if getattr(args, "pivots", False):
-            rows.extend(_calculate_pivots(ticker, df))
+        if args.pivots is not None:
+            methods = args.pivots if args.pivots else ["period", "fractals", "scipy"]
+            rows.extend(_calculate_pivots(ticker, df, methods))
         all_rows.extend(rows)
 
     if not all_rows:
@@ -286,7 +293,7 @@ def _calculate(ticker: str, df: pd.DataFrame) -> list[dict]:
 
 # ─── Pivots: máximos y mínimos locales ───────────────────────────────────────
 
-def _calculate_pivots(ticker: str, df: pd.DataFrame) -> list[dict]:
+def _calculate_pivots(ticker: str, df: pd.DataFrame, methods: list[str]) -> list[dict]:
     c = df["Close"].to_numpy(dtype=float)
     current = c[-1]
     rows = []
@@ -304,52 +311,53 @@ def _calculate_pivots(ticker: str, df: pd.DataFrame) -> list[dict]:
         })
 
     # ── A: Máximos/mínimos por período ────────────────────────────────────────
-    periods = [(20, "20D"), (60, "60D"), (252, "52W")]
-    for n, label in periods:
-        if len(c) < n:
-            continue
-        hi = talib.MAX(c, timeperiod=n)[-1]
-        lo = talib.MIN(c, timeperiod=n)[-1]
-        add("Período", f"High {label}", hi, pct(hi))
-        add("Período", f"Low  {label}", lo, pct(lo))
+    if "period" in methods:
+        for n, label in [(20, "20D"), (60, "60D"), (252, "52W")]:
+            if len(c) < n:
+                continue
+            hi = talib.MAX(c, timeperiod=n)[-1]
+            lo = talib.MIN(c, timeperiod=n)[-1]
+            add("Período", f"High {label}", hi, pct(hi))
+            add("Período", f"Low  {label}", lo, pct(lo))
 
     # ── B: Fractales de Williams (ventana 5 barras) ───────────────────────────
-    h = df["High"].to_numpy(dtype=float)
-    l = df["Low"].to_numpy(dtype=float)
+    if "fractals" in methods:
+        h = df["High"].to_numpy(dtype=float)
+        l = df["Low"].to_numpy(dtype=float)
 
-    fractal_highs, fractal_lows = [], []
-    for i in range(2, len(c) - 2):
-        if h[i] > h[i-1] and h[i] > h[i-2] and h[i] > h[i+1] and h[i] > h[i+2]:
-            fractal_highs.append((i, h[i]))
-        if l[i] < l[i-1] and l[i] < l[i-2] and l[i] < l[i+1] and l[i] < l[i+2]:
-            fractal_lows.append((i, l[i]))
+        fractal_highs, fractal_lows = [], []
+        for i in range(2, len(c) - 2):
+            if h[i] > h[i-1] and h[i] > h[i-2] and h[i] > h[i+1] and h[i] > h[i+2]:
+                fractal_highs.append((i, h[i]))
+            if l[i] < l[i-1] and l[i] < l[i-2] and l[i] < l[i+1] and l[i] < l[i+2]:
+                fractal_lows.append((i, l[i]))
 
-    dates = df.index
-    for rank, (idx, price) in enumerate(reversed(fractal_highs[-5:]), 1):
-        dias = len(c) - 1 - idx
-        add("Fractales · Resistencia", f"R{rank} ({dias}d atrás)", price, pct(price))
+        for rank, (idx, price) in enumerate(reversed(fractal_highs[-5:]), 1):
+            dias = len(c) - 1 - idx
+            add("Fractales · Resistencia", f"R{rank} ({dias}d atrás)", price, pct(price))
 
-    for rank, (idx, price) in enumerate(reversed(fractal_lows[-5:]), 1):
-        dias = len(c) - 1 - idx
-        add("Fractales · Soporte",     f"S{rank} ({dias}d atrás)", price, pct(price))
+        for rank, (idx, price) in enumerate(reversed(fractal_lows[-5:]), 1):
+            dias = len(c) - 1 - idx
+            add("Fractales · Soporte",     f"S{rank} ({dias}d atrás)", price, pct(price))
 
     # ── C: scipy find_peaks ───────────────────────────────────────────────────
-    prominence = current * 0.03  # mínimo 3% de movimiento para considerarlo pivot
+    if "scipy" in methods:
+        prominence = current * 0.03
 
-    peaks, props = find_peaks(c, prominence=prominence, distance=5)
-    troughs, tprops = find_peaks(-c, prominence=prominence, distance=5)
+        peaks, props = find_peaks(c, prominence=prominence, distance=5)
+        troughs, tprops = find_peaks(-c, prominence=prominence, distance=5)
 
-    for rank, idx in enumerate(reversed(peaks[-5:]), 1):
-        dias = len(c) - 1 - idx
-        prom = props["prominences"][list(peaks).index(idx)]
-        add("Scipy · Resistencia", f"P{rank} ({dias}d atrás)", c[idx],
-            f"{pct(c[idx])} | prom={prom:.2f}")
+        for rank, idx in enumerate(reversed(peaks[-5:]), 1):
+            dias = len(c) - 1 - idx
+            prom = props["prominences"][list(peaks).index(idx)]
+            add("Scipy · Resistencia", f"P{rank} ({dias}d atrás)", c[idx],
+                f"{pct(c[idx])} | prom={prom:.2f}")
 
-    for rank, idx in enumerate(reversed(troughs[-5:]), 1):
-        dias = len(c) - 1 - idx
-        prom = tprops["prominences"][list(troughs).index(idx)]
-        add("Scipy · Soporte", f"V{rank} ({dias}d atrás)", c[idx],
-            f"{pct(c[idx])} | prom={prom:.2f}")
+        for rank, idx in enumerate(reversed(troughs[-5:]), 1):
+            dias = len(c) - 1 - idx
+            prom = tprops["prominences"][list(troughs).index(idx)]
+            add("Scipy · Soporte", f"V{rank} ({dias}d atrás)", c[idx],
+                f"{pct(c[idx])} | prom={prom:.2f}")
 
     return rows
 
